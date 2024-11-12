@@ -1,0 +1,149 @@
+<html lang='en'>
+  <head>
+    <meta charset='UTF-8' />
+    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <link
+      href='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css'
+      rel='stylesheet'
+    />
+    <script
+      src='https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js'
+    ></script>
+    <script
+      src='https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js'
+    ></script>
+    <title>
+      {{ title }} - Blog Website
+    </title>
+  </head>
+  <body>
+    {{> navbar }}
+    <div class='container my-4'>
+      {{> content}}
+    </div>
+    {{!-- create a login popup using bootstrap modal --}}
+    <div
+      class='modal fade'
+      id='loginModal'
+      tabindex='-1'
+      aria-labelledby='loginModalLabel'
+      aria-hidden='true'
+      data-bs-backdrop="static" data-bs-keyboard="false"
+    >
+        <div class='modal-dialog modal-dialog-centered'>
+            <div class='modal-content'>
+            <div class='modal-header'>
+                <h5 class='modal-title' id='loginModalLabel'>Login</h5>
+            </div>
+            <div class='modal-body'>
+                <form id='loginForm'>
+                <div class='mb-3'>
+                    <label for='email' class='form-label'>Email address</label>
+                    <input
+                    type='email'
+                    class='form-control'
+                    id='email'
+                    aria-describedby='emailHelp'
+                    />
+                    <div id='emailHelp' class='form-text'>
+                    We'll never share your email with anyone else.
+                    </div>
+                </div>
+                <div class='mb-3'>
+                    <label for='password' class='form-label'>Password</label>
+                    <input type='password' class='form-control' id='password' />
+                </div>
+                <button type='submit' class='btn btn-primary'>
+                    Login
+                </button>
+                </form>
+            </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        $(document).ready(function () {
+            let loggedInAt = localStorage.getItem('loggedInAt');
+            let token = localStorage.getItem('token');
+            if(loggedInAt){
+                // check if the user is logged in for more than 1 day then logout and clear the local storage
+                if(new Date().getTime() - loggedInAt > 86400000){
+                    localStorage.clear();
+                    location.href = '/';
+                }
+            }
+            if(token){
+                $('#logged_in').show();
+                $('#logout_show').remove();
+                $('#logged_in a#navbarDropdown').text(JSON.parse(localStorage.getItem('user')).name);
+                $('#loginModal').remove();
+            }
+            else{
+                $('#logged_in').remove();
+                $('#logout_show').show();
+            }
+        });
+
+        function logout(){
+            localStorage.clear();
+            location.href = '/';
+        }
+        $('#loginForm').submit(function (e) {
+            e.preventDefault();
+            const email = $('#email').val();
+            const password = $('#password').val();
+            if (!email || !password) {
+                alert('Please fill all the fields');
+                return;
+            }
+            $.ajax({
+                url: '/api/auth/login',
+                method: 'POST',
+                data: {
+                    email,
+                    password,
+                },
+                success: function (response) {
+                    if(response.statusCode == 200){
+                        token = response.token;
+                        localStorage.setItem('token', token);
+                        localStorage.setItem('user', JSON.stringify(response.user));
+                        localStorage.setItem('loggedInAt', new Date().getTime());
+                        location.href = '/';
+                        alert('Login successful');
+                    }
+                    else{
+                        alert(response.message);
+                    }
+                },
+                error: function (error) {
+                    console.error(error);
+                    alert('An error occurred '+ error.message);
+                },
+            });
+        });
+    </script>
+    <script>
+        $(document).ready(function () {
+            var token = localStorage.getItem('token');
+            if (token) {
+                // if any ajax request code response is 401, then logout the user
+                $(document).ajaxError(function (event, jqxhr, settings, thrownError) {
+                    if (jqxhr.status == 401) {
+                        alert('Session expired. Please login again');
+                        localStorage.clear();
+                        location.href = '/';
+                    }
+                });
+            }
+
+            currentUrlPath = window.location.pathname;
+            // if the current url is not / then navigate to the login page
+            if (currentUrlPath != '/' && !token) {
+                alert('Please login to view this page');
+                location.href = '/';
+            }
+        });
+    </script>
+  </body>
+</html>

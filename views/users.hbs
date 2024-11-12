@@ -1,0 +1,184 @@
+{{#> main}}
+{{#*inline "content"}}
+<div class="table-responsive">
+  <table class="table table-hover" id="user_table">
+    <thead>
+      <tr>
+        <th scope="col">ID</th>
+        <th scope="col">Name</th>
+        <th scope="col">Email</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td colspan="5" class="text-center">
+          Loading...
+        </td>
+      </tr>
+  </table>
+</div>
+{{!-- view modal here --}}
+<div class="modal fade" id="viewUserModal" tabindex="-1" aria-labelledby="viewUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewUserModalLabel">User Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-12">
+            <div class="mb-3">
+              <label for="name" class="form-label">Name</label>
+              <input type="text" class="form-control" id="name" disabled />
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" disabled />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{{!-- edit modal here --}}
+<div class="modal fade" id="editUserModal" tabindex="-1" aria-labelledby="editUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editUserModalLabel">Edit User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-12" id="edit_form">
+            <div class="mb-3">
+              <label for="name" class="form-label">Name</label>
+              <input type="text" class="form-control" id="name" />
+            </div>
+            <div class="mb-3">
+              <label for="email" class="form-label">Email</label>
+              <input type="email" class="form-control" id="email" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="editUser">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  function editUser(id) {
+    $.ajax(
+      {
+        url: `/api/user/${id}`,
+        type: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        success: function (data) {
+          $('#edit_form').find('#name').val(data.user.name);
+          $('#edit_form').find('#email').val(data.user.email);
+          $('#editUser').attr('user_id', id);
+          $('#editUserModal').modal('show');
+
+        },
+        error: function (error) {
+          console.log(error);
+        },
+      }
+    );
+  }
+  $(document).ready(function () {
+    token = localStorage.getItem('token');
+    if (token) {
+      $.ajax(
+        {
+          url: '/api/user',
+          type: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          success: function (data) {
+            let table = $('#user_table tbody');
+            table.empty();
+            users = data.users;
+            users.forEach((user) => {
+              table.append(
+                `<tr>
+                      <td>${user._id}</td>
+                      <td>${user.name}</td>
+                      <td>${user.email}</td>
+                      <td>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#viewUserModal" onclick="viewUser('${user._id}')">View</button>
+                        <button class="btn btn-warning btn-sm" onclick="editUser('${user._id}')">Edit</button>
+                      </td>
+                    </tr>`
+              );
+            });
+          },
+          error: function (error) {
+            console.log(error);
+          },
+        }
+      );
+    }
+
+    viewUser = (id) => {
+      $.ajax(
+        {
+          url: `/api/user/${id}`,
+          type: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          success: function (data) {
+            $('#name').val(data.user.name);
+            $('#email').val(data.user.email);
+          },
+          error: function (error) {
+            console.log(error);
+          },
+        }
+      );
+    };
+
+    $('#editUser').click(function () {
+      name = $('#edit_form').find('#name').val();
+      email = $('#edit_form').find('#email').val();
+      id = $(this).attr('user_id');
+      if (!name || !email) {
+        alert('Please fill all the fields');
+        return;
+      }
+      $.ajax(
+        {
+          url: `/api/user/${id}`,
+          type: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          data: {
+            name,
+            email,
+          },
+          success: function (data) {
+            alert('User updated successfully');
+            location.reload();
+          },
+          error: function (error) {
+            console.log(error);
+            alert(error.responseJSON.message || 'An error occurred');
+          },
+        }
+      );
+    });
+  });
+</script>
+{{/inline}}
+{{/main}}
