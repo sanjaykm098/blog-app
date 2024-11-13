@@ -95,7 +95,7 @@
     );
   }
   $(document).ready(function () {
-    token = localStorage.getItem('token');
+    token = sessionStorage.getItem('token');
     if (token) {
       $.ajax(
         {
