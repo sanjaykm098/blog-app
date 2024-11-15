@@ -46,6 +46,8 @@
         </div>
     </div>
     <script>
+        // connect to IndexDb
+
         $(document).ready(function () {
             let loggedInAt = sessionStorage.getItem('loggedInAt');
             let token = sessionStorage.getItem('token');
@@ -89,21 +91,60 @@
                 },
                 success: function (response) {
                     if (response.statusCode == 200) {
-                        token = response.token;
+                        // Set session storage
+                        const token = response.token;
                         sessionStorage.setItem('token', token);
                         sessionStorage.setItem('user', JSON.stringify(response.user));
                         sessionStorage.setItem('loggedInAt', new Date().getTime());
+
+                        // Open IndexedDB and save user details
+                        const request = indexedDB.open('user_details', 1);
+                        let db;
+
+                        // Handle database structure setup (initial creation or version upgrade)
+                        request.onupgradeneeded = function (event) {
+                            db = event.target.result;
+                            const objectStore = db.createObjectStore('users', { keyPath: 'id' });
+                            objectStore.createIndex('name', 'name', { unique: false });
+                            objectStore.createIndex('email', 'email', { unique: true });
+                        };
+
+                        // Handle database success - adding data to store
+                        request.onsuccess = function (event) {
+                            db = event.target.result;
+
+                            // Start transaction for adding/updating user data
+                            const transaction = db.transaction(['users'], 'readwrite');
+                            const objectStore = transaction.objectStore('users');
+                            const user = JSON.parse(sessionStorage.getItem('user'));
+
+                            // Add or update user data
+                            const addRequest = objectStore.put(user);  // Use `put` instead of `add` to allow updates
+                            addRequest.onsuccess = function () {
+                                console.log("User data added/updated in IndexedDB");
+                            };
+                            addRequest.onerror = function (err) {
+                                console.error("Error saving user data in IndexedDB:", err);
+                            };
+                        };
+
+                        // Handle errors opening IndexedDB
+                        request.onerror = function (event) {
+                            console.error("Error opening IndexedDB:", event.target.error);
+                        };
+
+                        // Redirect and notify user
                         location.href = '/';
                         alert('Login successful');
-                    }
-                    else {
+                    } else {
                         alert(response.message);
                     }
                 },
                 error: function (error) {
                     console.error(error);
-                    alert('An error occurred ' + error.message);
-                },
+                    alert('An error occurred: ' + error.responseJSON.message);
+                }
+
             });
         });
     </script>

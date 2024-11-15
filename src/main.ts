@@ -12,6 +12,6 @@ async function bootstrap() {
   (hbs as any).registerPartials(join(__dirname, '..', 'views/partials'));
   (hbs as any).registerPartials(join(__dirname, '..', 'views/layout'));
   app.setViewEngine('hbs');
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();
